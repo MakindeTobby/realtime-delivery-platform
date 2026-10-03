@@ -1,0 +1,29 @@
+$kind: http-request
+description: Price must be a decimal string. Create the category first.
+url: "{{baseUrl}}/menu/items"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "categoryId": "{{categoryId}}",
+      "name": "Spaghetti Bolognese",
+      "description": "House-made tomato sauce",
+      "price": "12.50",
+      "imageUrl": "https://example.com/spaghetti.jpg"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerAccessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201 || pm.response.code === 200) {
+        const body = pm.response.json();
+        if (body.id) pm.environment.set('menuItemId', body.id);
+      }
+    language: text/javascript
+order: 5000

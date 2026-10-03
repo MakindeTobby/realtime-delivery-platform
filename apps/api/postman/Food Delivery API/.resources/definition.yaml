@@ -1,0 +1,27 @@
+$kind: collection
+description: |-
+  Frontend integration collection for the API currently implemented in this repository. Set baseUrl to the API origin plus /api. Public registration creates customers only; owner and driver accounts must be provisioned separately. Drivers can toggle online status, view their assigned orders through GET /orders/mine, and decline an assigned order. When an owner marks an order READY, the API assigns the first online driver it finds.
+
+  SOCKET.IO: Connect to {{serverOrigin}}/orders using Socket.IO with websocket transport. Client events: join:order (payload: order ID), join:restaurant (payload: restaurant ID), join:driver (payload: driver ID). Server events: order:updated (updated order row), driver:assigned (order).
+
+  SECURITY LIMITATION: The current Socket.IO gateway does not authenticate sockets or authorize room membership. Do not use it with real customer/order data or publish as a supported production integration until that is fixed.
+
+  See apps/api/POSTMAN_GUIDE.md for request setup, UploadThing, error behavior, and known limitations.
+variables:
+  baseUrl: http://localhost:3000/api
+  serverOrigin: http://localhost:3000
+  accessToken: ""
+  refreshToken: ""
+  ownerAccessToken: ""
+  driverAccessToken: ""
+  restaurantId: ""
+  categoryId: ""
+  menuItemId: ""
+  orderId: ""
+  passwordResetToken: ""
+auth:
+  - id: ffe92457-8155-48a4-9e50-28c86c90b487
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"

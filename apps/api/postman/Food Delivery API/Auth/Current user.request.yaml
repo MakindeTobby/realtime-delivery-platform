@@ -1,0 +1,5 @@
+$kind: http-request
+description: Returns the current user without the password field.
+url: "{{baseUrl}}/auth/me"
+method: GET
+order: 7000

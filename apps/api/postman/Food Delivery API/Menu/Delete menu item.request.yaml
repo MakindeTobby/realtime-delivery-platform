@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{baseUrl}}/menu/items/{{menuItemId}}"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerAccessToken}}"
+order: 8000

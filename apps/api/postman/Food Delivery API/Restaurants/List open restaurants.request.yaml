@@ -1,0 +1,5 @@
+$kind: http-request
+description: Currently requires accessToken despite being a discovery endpoint. Searches open restaurants by name/cuisine.
+url: "{{baseUrl}}/restaurants?search={{search}}"
+method: GET
+order: 3000

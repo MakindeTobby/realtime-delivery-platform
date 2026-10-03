@@ -1,0 +1,9 @@
+$kind: http-request
+description: Returns the authenticated driver's current online state as { isOnline }.
+url: "{{baseUrl}}/driver/status"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{driverAccessToken}}"
+order: 2000

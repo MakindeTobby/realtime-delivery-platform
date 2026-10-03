@@ -1,0 +1,17 @@
+$kind: http-request
+description: "Owner transitions: CONFIRMED → PREPARING → READY. Payment confirmation is performed by Stripe webhook."
+url: "{{baseUrl}}/orders/{{orderId}}/status"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "PREPARING"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerAccessToken}}"
+order: 5000

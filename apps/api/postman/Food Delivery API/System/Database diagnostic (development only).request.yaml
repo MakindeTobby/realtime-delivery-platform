@@ -1,0 +1,7 @@
+$kind: http-request
+description: Returns a sample user row. Do not call from the frontend or expose publicly.
+url: "{{baseUrl}}/db-test"
+method: GET
+auth:
+  type: noauth
+order: 2000

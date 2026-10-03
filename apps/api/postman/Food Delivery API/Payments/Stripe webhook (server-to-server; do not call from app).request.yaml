@@ -1,0 +1,13 @@
+$kind: http-request
+description: Use Stripe CLI or Stripe test mode to deliver signed events. Ordinary Postman requests will fail signature validation. Frontend must never call this endpoint.
+url: "{{baseUrl}}/payments/webhook"
+method: POST
+headers:
+  stripe-signature: <Stripe-generated signature>
+  Content-Type: application/json
+body:
+  type: text
+  content: <raw Stripe event body signed by Stripe>
+auth:
+  type: noauth
+order: 2000

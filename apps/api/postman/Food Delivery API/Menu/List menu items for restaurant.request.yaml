@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/menu/items/{{restaurantId}}"
+method: GET
+order: 6000

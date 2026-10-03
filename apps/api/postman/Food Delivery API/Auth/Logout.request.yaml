@@ -1,0 +1,15 @@
+$kind: http-request
+description: Revokes this refresh-token session.
+url: "{{baseUrl}}/auth/logout"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "refreshToken": "{{refreshToken}}"
+    }
+auth:
+  type: noauth
+order: 4000

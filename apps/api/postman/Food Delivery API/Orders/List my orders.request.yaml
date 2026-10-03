@@ -1,0 +1,5 @@
+$kind: http-request
+description: Returns the signed-in customer's orders or the driver's assigned orders, including restaurant and item details.
+url: "{{baseUrl}}/orders/mine"
+method: GET
+order: 2000

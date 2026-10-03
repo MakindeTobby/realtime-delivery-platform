@@ -1,0 +1,17 @@
+$kind: http-request
+description: "Driver transitions: READY → PICKED_UP → DELIVERED. An order is assigned automatically when an owner marks it READY."
+url: "{{baseUrl}}/orders/{{orderId}}/status"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "PICKED_UP"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{driverAccessToken}}"
+order: 6000

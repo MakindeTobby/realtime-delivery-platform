@@ -1,0 +1,5 @@
+$kind: http-request
+description: Currently requires an access token due to the class-level guard.
+url: "{{baseUrl}}/restaurants/{{restaurantId}}"
+method: GET
+order: 5000

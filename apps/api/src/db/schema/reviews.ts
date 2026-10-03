@@ -1,0 +1,21 @@
+import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { restaurants } from "./restaurants";
+import { users } from "./user";
+import { orders } from "./orders";
+
+export const reviews = pgTable('reviews', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: uuid('customer_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    restaurantId: uuid('restaurant_id').notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
+    orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+    driverId: uuid('driver_id').references(() => users.id, { onDelete: 'set null' }),
+    restaurantRating: integer('restaurant_rating').notNull(),
+    driverRating: integer('driver_rating'),
+    comment: text('comment'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+})
+
+export type Review = typeof reviews.$inferSelect;
+export type NewReview = typeof reviews.$inferInsert;

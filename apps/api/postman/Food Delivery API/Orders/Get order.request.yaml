@@ -1,0 +1,5 @@
+$kind: http-request
+description: Available to the customer, the owning restaurant account, or the assigned driver.
+url: "{{baseUrl}}/orders/{{orderId}}"
+method: GET
+order: 4000

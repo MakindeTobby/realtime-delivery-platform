@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/menu/categories/{{categoryId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Pasta and Noodles"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerAccessToken}}"
+order: 3000

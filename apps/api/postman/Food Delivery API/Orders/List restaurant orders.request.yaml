@@ -1,0 +1,9 @@
+$kind: http-request
+description: Restaurant-owner-only.
+url: "{{baseUrl}}/orders/restaurant"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerAccessToken}}"
+order: 3000

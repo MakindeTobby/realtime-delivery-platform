@@ -1,0 +1,13 @@
+$kind: http-request
+description: Customer must own the order. Returns a Stripe clientSecret. Backend currently creates USD intents.
+url: "{{baseUrl}}/payments/intent"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "orderId": "{{orderId}}"
+    }
+order: 1000

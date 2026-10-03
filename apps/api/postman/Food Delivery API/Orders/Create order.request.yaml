@@ -1,0 +1,29 @@
+$kind: http-request
+description: Customer-only. Server calculates the amount from current item prices. Current implementation does not reject closed restaurants/unavailable items.
+url: "{{baseUrl}}/orders"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "restaurantId": "{{restaurantId}}",
+      "deliveryAddress": "12 Main Street, Lagos",
+      "items": [
+        { "menuItemId": "{{menuItemId}}", "quantity": 2 }
+      ]
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201 || pm.response.code === 200) {
+        const body = pm.response.json();
+        if (body.id) pm.environment.set('orderId', body.id);
+      }
+    language: text/javascript
+order: 1000

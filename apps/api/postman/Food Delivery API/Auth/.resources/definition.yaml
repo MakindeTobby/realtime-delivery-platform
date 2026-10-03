@@ -1,0 +1,3 @@
+$kind: collection
+description: Customer signup, session tokens, password recovery, and current user.
+order: 1000

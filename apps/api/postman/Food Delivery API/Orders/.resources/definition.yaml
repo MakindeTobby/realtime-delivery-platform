@@ -1,0 +1,3 @@
+$kind: collection
+description: Customer ordering, owner order management, driver order lists, and order status transitions.
+order: 4000

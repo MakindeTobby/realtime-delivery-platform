@@ -1,0 +1,27 @@
+$kind: http-request
+description: Creates a CUSTOMER account and session. Public registration does not accept a role.
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Ada",
+      "lastName": "Lovelace",
+      "email": "ada@example.com",
+      "password": "password123"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201 || pm.response.code === 200) {
+        const body = pm.response.json();
+        if (body.accessToken) pm.environment.set('accessToken', body.accessToken);
+        if (body.refreshToken) pm.environment.set('refreshToken', body.refreshToken);
+      }
+    language: text/javascript
+order: 1000

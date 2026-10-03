@@ -1,0 +1,9 @@
+$kind: http-request
+description: Toggles the authenticated driver's isOnline state. This is not idempotent; avoid automatic retries.
+url: "{{baseUrl}}/driver/online"
+method: PATCH
+auth:
+  type: bearer
+  credentials:
+    token: "{{driverAccessToken}}"
+order: 1000

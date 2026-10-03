@@ -1,0 +1,3 @@
+$kind: collection
+description: Owner requests use ownerAccessToken. Restaurant discovery endpoints currently also require a valid bearer token because the controller has a class-level JWT guard.
+order: 2000

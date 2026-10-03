@@ -1,0 +1,29 @@
+$kind: http-request
+description: Owner-only. One restaurant per owner. Public registration creates customers only, so use a separately provisioned owner account.
+url: "{{baseUrl}}/restaurants"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Pasta House",
+      "description": "Fresh pasta and local ingredients",
+      "address": "12 Main Street",
+      "cuisineType": "Italian",
+      "imageUrl": "https://example.com/restaurant.jpg"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerAccessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201 || pm.response.code === 200) {
+        const body = pm.response.json();
+        if (body.id) pm.environment.set('restaurantId', body.id);
+      }
+    language: text/javascript
+order: 1000

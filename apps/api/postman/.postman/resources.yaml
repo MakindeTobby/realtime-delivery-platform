@@ -1,0 +1,9 @@
+# Use this workspace to collaborate
+workspace:
+  id: b0011d7c-3abc-444f-9297-ba36856b52fc
+
+localResources:
+  collections:
+    - ../Food Delivery API
+  environments:
+    - ../Food Delivery — Local.environment.yaml

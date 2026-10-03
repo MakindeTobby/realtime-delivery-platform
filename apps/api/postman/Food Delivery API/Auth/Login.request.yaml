@@ -1,0 +1,27 @@
+$kind: http-request
+description: If this is a provisioned owner/driver account, save the returned access token to ownerAccessToken or driverAccessToken for role-specific requests.
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "ada@example.com",
+      "password": "password123"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const body = pm.response.json();
+        if (body.accessToken) pm.environment.set('accessToken', body.accessToken);
+        if (body.refreshToken) pm.environment.set('refreshToken', body.refreshToken);
+        if (body.user?.role === 'RESTAURANT_OWNER' && body.accessToken) pm.environment.set('ownerAccessToken', body.accessToken);
+        if (body.user?.role === 'DRIVER' && body.accessToken) pm.environment.set('driverAccessToken', body.accessToken);
+      }
+    language: text/javascript
+order: 2000

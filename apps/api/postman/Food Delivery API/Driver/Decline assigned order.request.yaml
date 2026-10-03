@@ -1,0 +1,9 @@
+$kind: http-request
+description: Declines an order assigned to this driver. The API clears the assignment and tries the next online driver; returns 404 if this driver is not assigned to the order.
+url: "{{baseUrl}}/driver/orders/{{orderId}}/decline"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{driverAccessToken}}"
+order: 3000
