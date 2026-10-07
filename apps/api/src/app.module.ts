@@ -11,6 +11,7 @@ import { OrdersModule } from './order/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { DriverModule } from './driver/driver.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -26,7 +27,8 @@ import { DriverModule } from './driver/driver.module';
     OrdersModule,
     PaymentsModule,
     GatewayModule,
-    DriverModule
+    DriverModule,
+     AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

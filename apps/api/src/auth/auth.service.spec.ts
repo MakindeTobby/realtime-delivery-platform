@@ -4,28 +4,39 @@ import * as bcrypt from 'bcrypt';
 import type { Database } from '../db';
 import { User } from '../db/schema';
 import { AuthService } from './auth.service';
+import { EmailVerificationService } from './email-verification.service';
 
 describe('AuthService.login', () => {
   let service: AuthService;
   let matchingUser: User | undefined;
-  let comparePassword: jest.SpyInstance;
+  let comparePassword: jest.SpiedFunction<typeof bcrypt.compare>;
 
   beforeEach(() => {
     matchingUser = undefined;
 
-    const where = jest.fn().mockImplementation(async () =>
-      matchingUser ? [matchingUser] : [],
-    );
+    const where = jest
+      .fn()
+      .mockImplementation(async () => (matchingUser ? [matchingUser] : []));
+
     const from = jest.fn().mockReturnValue({ where });
+
     const db = {
       select: jest.fn().mockReturnValue({ from }),
     } as unknown as Database;
 
     service = new AuthService(
       db,
-      { sign: jest.fn().mockReturnValue('token') } as unknown as JwtService,
+      {
+        sign: jest.fn().mockReturnValue('token'),
+      } as unknown as JwtService,
+      {
+        sendVerificationCode: jest.fn(),
+      } as unknown as EmailVerificationService,
     );
-    comparePassword = jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
+
+    comparePassword = jest.spyOn(bcrypt, 'compare');
+
+    comparePassword.mockImplementation(async () => false);
   });
 
   afterEach(() => {
@@ -34,7 +45,10 @@ describe('AuthService.login', () => {
 
   it('returns generic unauthorized credentials for an unknown email without comparing a password', async () => {
     await expect(
-      service.login({ email: 'missing@example.com', password: 'password' }),
+      service.login({
+        email: 'missing@example.com',
+        password: 'password',
+      }),
     ).rejects.toMatchObject({
       status: 401,
       response: 'Invalid Credentials',
@@ -50,15 +64,22 @@ describe('AuthService.login', () => {
       lastName: 'Lovelace',
       email: 'ada@example.com',
       password: 'hashed-password',
-      role: 'CUSTOMER',
+      phone: null,
+      emailVerified: true,
       pushToken: null,
-      isOnline: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
+    if (!matchingUser) {
+      throw new Error('Test user was not initialized');
+    }
+
     await expect(
-      service.login({ email: matchingUser.email, password: 'wrong-password' }),
+      service.login({
+        email: matchingUser.email,
+        password: 'wrong-password',
+      }),
     ).rejects.toMatchObject({
       status: 401,
       response: 'Invalid Credentials',

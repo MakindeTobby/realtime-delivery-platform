@@ -8,7 +8,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { eq, gt, and, isNull, lte, sql } from 'drizzle-orm';
-import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload, UserRole } from '@food-delivery/types';
 import { RegisterDto } from './dto/register.dto';
@@ -17,12 +22,23 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import type { Database } from '../db';
-import { authSessions, passwordResets, User, users } from '../db/schema';
-import { ACCESS_TOKEN_TTL_SECONDS, SESSION_TTL_SECONDS } from './session.constants';
+import {
+  authSessions,
+  passwordResets,
+  User,
+  userRoles,
+  users,
+} from '../db/schema';
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  SESSION_TTL_SECONDS,
+} from './session.constants';
+import { EmailVerificationService } from './email-verification.service';
 
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 const PASSWORD_RESET_RESPONSE = {
-  message: 'If an account exists for that email, a password reset link has been sent.',
+  message:
+    'If an account exists for that email, a password reset link has been sent.',
 };
 
 type SessionTokenPayload = JwtPayload & {
@@ -38,26 +54,41 @@ export class AuthService {
     @Inject('DB')
     private readonly db: Database,
     private readonly jwtService: JwtService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
-
   async register(dto: RegisterDto) {
     const [existing] = await this.db
       .select()
       .from(users)
       .where(eq(users.email, dto.email));
-    if (existing) throw new ConflictException('Email already in use');
+
+    if (existing) {
+      throw new ConflictException('Email already in use');
+    }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const [user] = await this.db
-      .insert(users)
-      .values({
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        password: hashedPassword,
+
+    const user = await this.db.transaction(async (tx) => {
+      const [newUser] = await tx
+        .insert(users)
+        .values({
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          email: dto.email,
+          password: hashedPassword,
+          phone: dto.phone,
+          emailVerified: false,
+        })
+        .returning();
+
+      await tx.insert(userRoles).values({
+        userId: newUser.id,
         role: UserRole.CUSTOMER,
-      })
-      .returning();
+      });
+
+      return newUser;
+    });
+    await this.emailVerificationService.sendVerificationCode(user.id);
 
     return this.createSession(user);
   }
@@ -110,7 +141,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const tokenPair = await this.createTokenPair(user, session.id, session.expiresAt);
+    const tokenPair = await this.createTokenPair(
+      user,
+      session.id,
+      session.expiresAt,
+    );
     const [rotatedSession] = await this.db
       .update(authSessions)
       .set({
@@ -132,7 +167,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    return { user: this.sanitizeUser(user), ...tokenPair };
+    return { user: await this.sanitizeUser(user), ...tokenPair };
   }
 
   async logout(dto: RefreshTokenDto) {
@@ -146,7 +181,9 @@ export class AuthService {
     const from = process.env.EMAIL_FROM;
     const resetUrl = process.env.PASSWORD_RESET_URL;
     if (!apiKey || !from || !resetUrl) {
-      throw new ServiceUnavailableException('Password recovery email is not configured');
+      throw new ServiceUnavailableException(
+        'Password recovery email is not configured',
+      );
     }
 
     const email = dto.email.trim();
@@ -160,13 +197,19 @@ export class AuthService {
     await this.db
       .update(passwordResets)
       .set({ usedAt: now })
-      .where(and(eq(passwordResets.userId, user.id), isNull(passwordResets.usedAt)));
-    await this.db.delete(passwordResets).where(lte(passwordResets.expiresAt, now));
+      .where(
+        and(eq(passwordResets.userId, user.id), isNull(passwordResets.usedAt)),
+      );
+    await this.db
+      .delete(passwordResets)
+      .where(lte(passwordResets.expiresAt, now));
 
     const token = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(token);
     const expiresAt = new Date(now.getTime() + PASSWORD_RESET_TTL_MS);
-    await this.db.insert(passwordResets).values({ userId: user.id, tokenHash, expiresAt });
+    await this.db
+      .insert(passwordResets)
+      .values({ userId: user.id, tokenHash, expiresAt });
 
     const link = new URL(resetUrl);
     link.searchParams.set('token', token);
@@ -184,7 +227,8 @@ export class AuthService {
           html: `<p>We received a request to reset your password.</p><p><a href="${link.toString()}">Reset your password</a></p><p>This link expires in 30 minutes. If you did not request this, you can ignore this email.</p>`,
         }),
       });
-      if (!response.ok) throw new Error(`Email provider returned ${response.status}`);
+      if (!response.ok)
+        throw new Error(`Email provider returned ${response.status}`);
     } catch (error) {
       this.logger.error('Could not send password reset email', error);
     }
@@ -207,7 +251,10 @@ export class AuthService {
       )
       .returning({ userId: passwordResets.userId });
 
-    if (!reset) throw new UnauthorizedException('Invalid or expired password reset token');
+    if (!reset)
+      throw new UnauthorizedException(
+        'Invalid or expired password reset token',
+      );
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     await this.db
@@ -220,10 +267,13 @@ export class AuthService {
   }
 
   async getCurrentUser(userId: string) {
-    const [user] = await this.db.select().from(users).where(eq(users.id, userId));
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
     if (!user) throw new UnauthorizedException('Invalid or expired token');
 
-    return this.sanitizeUser(user);
+    return await this.sanitizeUser(user);
   }
 
   /** Call after a password change to revoke every active device session. */
@@ -231,7 +281,9 @@ export class AuthService {
     await this.db
       .update(authSessions)
       .set({ revokedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(authSessions.userId, userId), isNull(authSessions.revokedAt)));
+      .where(
+        and(eq(authSessions.userId, userId), isNull(authSessions.revokedAt)),
+      );
   }
 
   private async createSession(user: User) {
@@ -246,7 +298,7 @@ export class AuthService {
       expiresAt,
     });
 
-    return { user: this.sanitizeUser(user), ...tokenPair };
+    return { user: await this.sanitizeUser(user), ...tokenPair };
   }
 
   private async createTokenPair(
@@ -254,15 +306,17 @@ export class AuthService {
     sessionId: string,
     expiresAt: Date,
   ) {
-    const refreshExpirySeconds = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
+    const refreshExpirySeconds = Math.floor(
+      (expiresAt.getTime() - Date.now()) / 1000,
+    );
     if (refreshExpirySeconds <= 0) {
-      throw new UnauthorizedException('Session has expired; please sign in again');
+      throw new UnauthorizedException(
+        'Session has expired; please sign in again',
+      );
     }
 
     const claims = {
       sub: user.id,
-      email: user.email,
-      role: user.role,
       sessionId,
     };
     const [accessToken, refreshToken] = await Promise.all([
@@ -280,7 +334,9 @@ export class AuthService {
     };
   }
 
-  private async verifyRefreshToken(token: string): Promise<SessionTokenPayload> {
+  private async verifyRefreshToken(
+    token: string,
+  ): Promise<SessionTokenPayload> {
     let payload: SessionTokenPayload;
     try {
       payload = await this.jwtService.verifyAsync<SessionTokenPayload>(token);
@@ -320,12 +376,25 @@ export class AuthService {
   private hashesMatch(storedHash: string, presentedHash: string) {
     const stored = Buffer.from(storedHash, 'hex');
     const presented = Buffer.from(presentedHash, 'hex');
-    return stored.length === presented.length && timingSafeEqual(stored, presented);
+    return (
+      stored.length === presented.length && timingSafeEqual(stored, presented)
+    );
   }
 
-  private sanitizeUser(user: User) {
+  private async sanitizeUser(user: User) {
+    const roles = await this.db
+      .select({
+        role: userRoles.role,
+      })
+      .from(userRoles)
+      .where(eq(userRoles.userId, user.id));
+
     const { password, ...safeUser } = user;
     void password;
-    return safeUser;
+
+    return {
+      ...safeUser,
+      roles: roles.map(({ role }) => role),
+    };
   }
 }

@@ -1,11 +1,14 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { and, eq, gt, isNull } from 'drizzle-orm';
-import { JwtPayload } from '@food-delivery/types';
+import { JwtPayload, UserRole } from '@food-delivery/types';
 import type { Database } from '../db';
-import { authSessions, users } from '../db/schema';
+import { sql } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
+
+import { authSessions, userRoles, users } from '../db/schema';
 
 type AccessTokenPayload = JwtPayload & {
+  sub: string;
   sessionId: string;
   tokenType: 'access';
 };
@@ -35,10 +38,11 @@ export async function authenticateAccessToken(
     .select({
       userId: users.id,
       email: users.email,
-      role: users.role,
+      roles: sql<UserRole[]>`array_agg(${userRoles.role})`,
     })
     .from(authSessions)
     .innerJoin(users, eq(authSessions.userId, users.id))
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
     .where(
       and(
         eq(authSessions.id, payload.sessionId),
@@ -46,8 +50,8 @@ export async function authenticateAccessToken(
         isNull(authSessions.revokedAt),
         gt(authSessions.expiresAt, new Date()),
       ),
-    );
-
+    )
+    .groupBy(users.id, users.email);
   if (!activeSession) {
     throw new UnauthorizedException('Invalid or expired token');
   }
@@ -55,6 +59,6 @@ export async function authenticateAccessToken(
   return {
     sub: activeSession.userId,
     email: activeSession.email,
-    role: activeSession.role,
+    roles: activeSession.roles,
   };
 }

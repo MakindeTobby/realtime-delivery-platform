@@ -11,18 +11,7 @@ export class AppController {
     private readonly db: Database,
   ) { }
 
-  @Get("db-test")
-  async dbTest() {
-    const result = await this.db
-      .select()
-      .from(users)
-      .limit(1);
 
-    return {
-      users: result,
-      count: result.length,
-    };
-  }
 
   @Get('health')
   healthCheck(): HealthCheckResponse {

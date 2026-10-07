@@ -1,5 +1,5 @@
 import { JwtPayload, UserRole } from '@food-delivery/types';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { createUploadthing, type FileRouter } from 'uploadthing/express';
 import { UploadThingError } from 'uploadthing/server';
 import { JwtService } from '@nestjs/jwt';
@@ -16,7 +16,10 @@ function getBearerToken(authorization: string | undefined): string {
   return token;
 }
 
-export function createUploadRouter(jwtService: JwtService, db: Database): FileRouter {
+export function createUploadRouter(
+  jwtService: JwtService,
+  db: Database,
+): FileRouter {
   const requireRestaurantOwner = async (authorization: string | undefined) => {
     const token = getBearerToken(authorization);
     let user: JwtPayload;
@@ -29,8 +32,10 @@ export function createUploadRouter(jwtService: JwtService, db: Database): FileRo
       throw error;
     }
 
-    if (user.role !== UserRole.RESTAURANT_OWNER) {
-      throw new UploadThingError('Only restaurant owners can upload these images');
+    if (!user.roles.includes(UserRole.RESTAURANT_OWNER)) {
+      throw new ForbiddenException(
+        'Only restaurant owners can upload restaurant assets',
+      );
     }
     return { uploadedBy: user.sub };
   };
@@ -39,7 +44,9 @@ export function createUploadRouter(jwtService: JwtService, db: Database): FileRo
     restaurantImage: f({
       image: { maxFileSize: '4MB', maxFileCount: 1 },
     })
-      .middleware(({ req }) => requireRestaurantOwner(req.headers.authorization))
+      .middleware(({ req }) =>
+        requireRestaurantOwner(req.headers.authorization),
+      )
       .onUploadComplete(({ file, metadata }) => {
         console.log('Upload completed by:', metadata.uploadedBy);
         console.log('File URL:', file.ufsUrl);
@@ -48,7 +55,9 @@ export function createUploadRouter(jwtService: JwtService, db: Database): FileRo
     menuItemImage: f({
       image: { maxFileSize: '4MB', maxFileCount: 1 },
     })
-      .middleware(({ req }) => requireRestaurantOwner(req.headers.authorization))
+      .middleware(({ req }) =>
+        requireRestaurantOwner(req.headers.authorization),
+      )
       .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
   } satisfies FileRouter;
 }
