@@ -5,19 +5,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { makeStyles, useTheme } from "@/theme";
 
-type Props = {
-  title: string;
-  subtitle: string;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
-};
-
-export function CartHeader({
-  title,
-  subtitle,
-  isFavorite,
-  onToggleFavorite,
-}: Props) {
+export function CartHeader() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -35,29 +23,9 @@ export function CartHeader({
       </Pressable>
 
       <View style={styles.titleBlock}>
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-        <Text style={styles.subtitle} numberOfLines={1}>
-          {subtitle}
-        </Text>
+        <Text style={styles.title}>Cart</Text>
       </View>
-
-      <Pressable
-        onPress={onToggleFavorite}
-        style={styles.iconButton}
-        hitSlop={10}
-        accessibilityRole="button"
-        accessibilityLabel={
-          isFavorite ? "Remove from favorites" : "Add to favorites"
-        }
-      >
-        <Ionicons
-          name={isFavorite ? "heart" : "heart-outline"}
-          size={20}
-          color={colors.brand.primary}
-        />
-      </Pressable>
+      <View style={styles.trailingSpace} />
     </View>
   );
 }
@@ -80,9 +48,5 @@ const useStyles = makeStyles((theme) => ({
   },
   titleBlock: { flex: 1, marginLeft: theme.spacing.xs },
   title: { ...theme.typography.h2, color: theme.colors.text.primary },
-  subtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    marginTop: 1,
-  },
+  trailingSpace: { width: 36 },
 }));

@@ -1,4 +1,5 @@
-import { JwtPayload, UserRole } from '@food-delivery/types';
+import { UserRole } from '@food-delivery/types';
+import type { JwtPayload } from '@food-delivery/types';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { createUploadthing, type FileRouter } from 'uploadthing/express';
 import { UploadThingError } from 'uploadthing/server';
@@ -45,20 +46,29 @@ export function createUploadRouter(
       image: { maxFileSize: '4MB', maxFileCount: 1 },
     })
       .middleware(({ req }) =>
-        requireRestaurantOwner(req.headers.authorization),
+        requireRestaurantOwner(
+          (req as unknown as { headers: { authorization?: string } }).headers
+            .authorization,
+        ),
       )
       .onUploadComplete(({ file, metadata }) => {
+        const fileUrl = (file as unknown as { ufsUrl: string }).ufsUrl;
         console.log('Upload completed by:', metadata.uploadedBy);
-        console.log('File URL:', file.ufsUrl);
-        return { url: file.ufsUrl };
+        console.log('File URL:', fileUrl);
+        return { url: fileUrl };
       }),
     menuItemImage: f({
       image: { maxFileSize: '4MB', maxFileCount: 1 },
     })
       .middleware(({ req }) =>
-        requireRestaurantOwner(req.headers.authorization),
+      requireRestaurantOwner(
+        (req as unknown as { headers: { authorization?: string } }).headers
+          .authorization,
+      ),
       )
-      .onUploadComplete(({ file }) => ({ url: file.ufsUrl })),
+    .onUploadComplete(({ file }) => ({
+      url: (file as unknown as { ufsUrl: string }).ufsUrl,
+    })),
   } satisfies FileRouter;
 }
 

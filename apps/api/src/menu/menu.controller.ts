@@ -19,16 +19,21 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 type AuthRequest = ExpressRequest & { user: JwtPayload };
 
 @Controller('restaurants/:restaurantId/menu')
+@ApiTags('Restaurant menu')
 export class MenuController {
   constructor(private menuService: MenuService) {}
 
   // CATEGORIES
 
   @Post('categories')
+  @ApiBearerAuth('access-token')
+  @ApiBody({ type: CreateCategoryDto })
+  @ApiOperation({ summary: 'Create a menu category' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESTAURANT_OWNER)
   createCategory(
@@ -40,11 +45,15 @@ export class MenuController {
   }
 
   @Get('categories')
+  @ApiOperation({ summary: 'List restaurant menu categories' })
   getCategories(@Param('restaurantId') restaurantId: string) {
     return this.menuService.getCategories(restaurantId);
   }
 
   @Patch('categories/:id')
+  @ApiBearerAuth('access-token')
+  @ApiBody({ type: UpdateCategoryDto })
+  @ApiOperation({ summary: 'Update a menu category' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESTAURANT_OWNER)
   updateCategory(
@@ -57,6 +66,8 @@ export class MenuController {
   }
 
   @Delete('categories/:id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a menu category' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESTAURANT_OWNER)
   deleteCategory(
@@ -70,6 +81,9 @@ export class MenuController {
   // MENU ITEMS
 
   @Post('items')
+  @ApiBearerAuth('access-token')
+  @ApiBody({ type: CreateMenuItemDto })
+  @ApiOperation({ summary: 'Create a menu item' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESTAURANT_OWNER)
   createItem(
@@ -81,11 +95,15 @@ export class MenuController {
   }
 
   @Get('items')
+  @ApiOperation({ summary: 'List menu items for a restaurant' })
   getItems(@Param('restaurantId') restaurantId: string) {
     return this.menuService.getItemsByRestaurant(restaurantId);
   }
 
   @Patch('items/:id')
+  @ApiBearerAuth('access-token')
+  @ApiBody({ type: UpdateMenuItemDto })
+  @ApiOperation({ summary: 'Update a menu item' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESTAURANT_OWNER)
   updateItem(
@@ -98,6 +116,8 @@ export class MenuController {
   }
 
   @Delete('items/:id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a menu item' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESTAURANT_OWNER)
   deleteItem(

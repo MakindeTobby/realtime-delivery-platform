@@ -12,6 +12,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { DriverModule } from './driver/driver.module';
 import { AdminModule } from './admin/admin.module';
+import { AddressesModule } from './addresses/addresses.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AdminModule } from './admin/admin.module';
     PaymentsModule,
     GatewayModule,
     DriverModule,
+    AddressesModule,
      AdminModule,
   ],
   controllers: [AppController],

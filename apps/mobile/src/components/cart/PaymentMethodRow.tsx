@@ -31,11 +31,11 @@ export function PaymentMethodRow({
         <Text style={styles.methodLabel}>{methodLabel}</Text>
         <Ionicons name="chevron-down" size={16} color={colors.text.secondary} />
         <Text style={styles.dot}>·</Text>
-        <Text style={styles.amount}>Rp{amount.toLocaleString("id-ID")}</Text>
+        <Text style={styles.amount}>₦{amount.toLocaleString("en-NG")}</Text>
       </Pressable>
       {!!savedAmount && (
         <Text style={styles.savedText}>
-          You saved Rp{savedAmount.toLocaleString("id-ID")}
+          You saved ₦{savedAmount.toLocaleString("en-NG")}
         </Text>
       )}
     </View>

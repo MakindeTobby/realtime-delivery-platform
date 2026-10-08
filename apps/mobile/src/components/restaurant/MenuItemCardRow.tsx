@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Image, Pressable, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { makeStyles, useTheme } from "@/theme";
 import { QuantityStepper } from "./QuantityStepper";
@@ -43,11 +43,11 @@ export function MenuItemCardRow({ item, restaurantId }: Props) {
 
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              Rp{item.price.toLocaleString("id-ID")}
+              {formatNaira(item.price)}
             </Text>
             {item.originalPrice && (
               <Text style={styles.originalPrice}>
-                Rp{item.originalPrice.toLocaleString("id-ID")}
+              {formatNaira(item.originalPrice)}
               </Text>
             )}
           </View>
@@ -101,6 +101,7 @@ export function MenuItemCardRow({ item, restaurantId }: Props) {
         </View>
 
         <View style={[styles.thumbnail, { backgroundColor: item.imageColor }]}>
+          {item.imageUrl ? <Image source={{ uri: item.imageUrl }} resizeMode="cover" style={styles.thumbnailImage} /> : null}
           {item.hasExtraDiscount && (
             <View style={styles.discountTag}>
               <Text style={styles.discountTagText}>Extra discount</Text>
@@ -110,6 +111,10 @@ export function MenuItemCardRow({ item, restaurantId }: Props) {
       </View>
     </View>
   );
+}
+
+function formatNaira(value: number) {
+  return `₦${new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 }).format(value)}`;
 }
 
 const useStyles = makeStyles((theme) => ({
@@ -164,6 +169,7 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing.xs,
   },
   thumbnail: { width: 84, height: 84, borderRadius: theme.radius.md },
+  thumbnailImage: { position: "absolute", width: "100%", height: "100%", borderRadius: theme.radius.md },
   discountTag: {
     position: "absolute",
     top: 6,

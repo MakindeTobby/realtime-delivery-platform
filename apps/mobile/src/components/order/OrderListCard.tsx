@@ -28,9 +28,9 @@ export function OrderListCard({ order }: Props) {
       style={styles.container}
       onPress={() =>
         router.push({
-          pathname: "/order/[orderId]",
+          pathname: "/order/[id]",
           params: {
-            orderId: order.id,
+            id: order.id,
             restaurantName: order.restaurantName,
             totalPayment: String(order.totalPayment),
           },
@@ -68,7 +68,7 @@ export function OrderListCard({ order }: Props) {
 
       <View style={styles.rightColumn}>
         <Text style={styles.price}>
-          Rp{order.totalPayment.toLocaleString("id-ID")}
+          ₦{order.totalPayment.toLocaleString("en-NG")}
         </Text>
         <Ionicons
           name="chevron-forward"

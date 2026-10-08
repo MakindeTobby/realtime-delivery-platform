@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { eq, gt, and, isNull, lte, sql } from 'drizzle-orm';
 import {
   createHash,
@@ -88,9 +88,13 @@ export class AuthService {
 
       return newUser;
     });
-    await this.emailVerificationService.sendVerificationCode(user.id);
+    const verificationDelivery =
+      await this.emailVerificationService.sendVerificationCode(user.id);
 
-    return this.createSession(user);
+    return {
+      ...(await this.createSession(user)),
+      verificationDelivery,
+    };
   }
 
   async login(dto: LoginDto) {
@@ -286,6 +290,26 @@ export class AuthService {
       );
   }
 
+  // Your endpoint: POST /auth/partner/check-existence
+  async checkPartnerExistence(email: string) {
+    const [existingUser] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email)); // or users.email
+
+    if (existingUser) {
+      // Return a clean 200 OK status with instructions for the frontend dashboard
+      return {
+        exists: true,
+        userName: `${existingUser.firstName} ${existingUser.lastName}`,
+        message:
+          'Account recognized. We can link your business to this profile.',
+      };
+    }
+
+    return { exists: false };
+  }
+
   private async createSession(user: User) {
     const sessionId = randomUUID();
     const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
@@ -323,7 +347,7 @@ export class AuthService {
       this.jwtService.signAsync({ ...claims, tokenType: 'access' }),
       this.jwtService.signAsync(
         { ...claims, tokenType: 'refresh' },
-        { expiresIn: refreshExpirySeconds },
+        { expiresIn: refreshExpirySeconds } as JwtSignOptions,
       ),
     ]);
 

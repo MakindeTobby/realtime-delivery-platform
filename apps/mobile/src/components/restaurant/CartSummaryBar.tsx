@@ -36,7 +36,7 @@ export function CartSummaryBar() {
           {firstItemName}
         </Text>
       </View>
-      <Text style={styles.price}>Rp{totalPrice.toLocaleString("id-ID")}</Text>
+      <Text style={styles.price}>{formatNaira(totalPrice)}</Text>
       <Ionicons
         name="chevron-forward"
         size={18}
@@ -44,6 +44,10 @@ export function CartSummaryBar() {
       />
     </Pressable>
   );
+}
+
+function formatNaira(value: number) {
+  return `₦${new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 }).format(value)}`;
 }
 
 const useStyles = makeStyles((theme) => ({

@@ -44,7 +44,8 @@ async function refreshAccessToken() {
       return accessToken;
     })()
       .catch(async (error: unknown) => {
-        await deleteTokens();
+        const { useAuthStore } = await import("@/store/auth");
+        await useAuthStore.getState().clearAuth();
         throw error;
       })
       .finally(() => {

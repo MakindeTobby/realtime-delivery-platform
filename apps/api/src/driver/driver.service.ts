@@ -8,6 +8,7 @@ import type { Database } from '../db';
 import { OrdersGateway } from '../gateway/orders.gateway';
 import {
   driverOrderDeclines,
+  driverLocations,
   driverProfiles,
   orders,
   userRoles,
@@ -15,6 +16,7 @@ import {
 } from '../db/schema';
 import { and, eq, inArray, isNotNull, isNull, not, sql } from 'drizzle-orm';
 import { UserRole } from '@food-delivery/types';
+import { UpdateDriverLocationDto } from './dto/update-driver-location.dto';
 
 @Injectable()
 export class DriverService {
@@ -111,6 +113,50 @@ export class DriverService {
     const driver = await this.getDriverProfileByUserId(userId);
 
     return { isOnline: driver.isOnline };
+  }
+
+  async updateLocation(userId: string, dto: UpdateDriverLocationDto) {
+    const driver = await this.getDriverProfileByUserId(userId);
+
+    if (driver.verificationStatus !== 'APPROVED') {
+      throw new ForbiddenException(
+        'Driver must be approved before sharing a delivery location',
+      );
+    }
+
+    const [activeOrder] = await this.db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(
+        and(eq(orders.driverId, driver.id), eq(orders.status, 'PICKED_UP')),
+      )
+      .limit(1);
+
+    if (!activeOrder) {
+      throw new ForbiddenException(
+        'Location updates are only accepted during an active delivery',
+      );
+    }
+
+    const [location] = await this.db
+      .insert(driverLocations)
+      .values({
+        driverId: driver.id,
+        latitude: dto.latitude.toFixed(7),
+        longitude: dto.longitude.toFixed(7),
+        heading: dto.heading === undefined ? null : dto.heading.toFixed(2),
+        speed: dto.speed === undefined ? null : dto.speed.toFixed(2),
+        recordedAt: new Date(),
+      })
+      .returning({
+        latitude: driverLocations.latitude,
+        longitude: driverLocations.longitude,
+        heading: driverLocations.heading,
+        speed: driverLocations.speed,
+        recordedAt: driverLocations.recordedAt,
+      });
+
+    return location;
   }
 
   async assignDriver(orderId: string) {

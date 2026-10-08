@@ -6,6 +6,7 @@ export default function OwnerLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="search" />
       <Stack.Screen name="near-me" />
+      <Stack.Screen name="profile/addresses" />
     </Stack>
   );
 }

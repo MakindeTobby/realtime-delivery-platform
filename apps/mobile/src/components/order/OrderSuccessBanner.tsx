@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { makeStyles, useTheme } from "@/theme";
 
 type Props = {
-  etaMinutes: number;
+  etaMinutes: number | null;
   onDismiss: () => void;
   durationMs?: number;
 };
@@ -29,7 +29,9 @@ export function OrderSuccessBanner({
       </View>
       <Text style={styles.title}>Order successful</Text>
       <Text style={styles.subtitle}>
-        Cool down, your food will arrive in {etaMinutes} minutes.
+        {etaMinutes
+          ? `Your food should arrive in about ${etaMinutes} minutes.`
+          : "The restaurant has updated your order."}
       </Text>
     </View>
   );

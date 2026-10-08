@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { makeStyles, useTheme } from "../../theme";
 
@@ -18,6 +18,7 @@ export type Restaurant = {
   imageColor: string; // placeholder swatch until real photos are wired up
   isFavorite?: boolean;
   isOpenNow?: boolean;
+  imageUrl?: string | null;
 };
 
 type Props = {
@@ -43,11 +44,14 @@ export function RestaurantCard({
       <View
         style={[styles.thumbnail, { backgroundColor: restaurant.imageColor }]}
       >
-        <View style={styles.ratingBadge}>
+        {restaurant.imageUrl ? (
+          <Image source={{ uri: restaurant.imageUrl }} resizeMode="cover" style={styles.thumbnailImage} />
+        ) : null}
+        {restaurant.rating > 0 && <View style={styles.ratingBadge}>
           <Ionicons name="star" size={10} color={colors.rating} />
           <Text style={styles.ratingValue}>{restaurant.rating}</Text>
           <Text style={styles.ratingCount}>({restaurant.reviewCount})</Text>
-        </View>
+        </View>}
       </View>
 
       <View style={styles.info}>
@@ -60,22 +64,16 @@ export function RestaurantCard({
           </Text>
         )}
 
-        {restaurant.distanceKm > 0 && (
+        {(restaurant.priceFrom || restaurant.distanceKm > 0 || restaurant.deliveryMinutes > 0 || restaurant.isOpenNow !== undefined) && (
           <View style={styles.metaRow}>
-            <Text style={styles.metaText}>
-              Start from {restaurant.priceFrom}
-            </Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText}>
-              {restaurant.distanceKm}Km Distance
-            </Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText}>
-              Delivery in {restaurant.deliveryMinutes} min
-            </Text>
+            {!!restaurant.priceFrom && <Text style={styles.metaText}>Start from {restaurant.priceFrom}</Text>}
+            {!!restaurant.priceFrom && restaurant.distanceKm > 0 && <Text style={styles.metaDot}>·</Text>}
+            {restaurant.distanceKm > 0 && <Text style={styles.metaText}>{restaurant.distanceKm}Km Distance</Text>}
+            {restaurant.distanceKm > 0 && restaurant.deliveryMinutes > 0 && <Text style={styles.metaDot}>·</Text>}
+            {restaurant.deliveryMinutes > 0 && <Text style={styles.metaText}>Delivery in {restaurant.deliveryMinutes} min</Text>}
             {restaurant.isOpenNow !== undefined && (
               <>
-                <Text style={styles.metaDot}>·</Text>
+                {(restaurant.priceFrom || restaurant.distanceKm > 0 || restaurant.deliveryMinutes > 0) && <Text style={styles.metaDot}>·</Text>}
                 <Text
                   style={
                     restaurant.isOpenNow ? styles.openText : styles.closedText
@@ -157,6 +155,7 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.radius.md,
     marginRight: theme.spacing.sm,
   },
+  thumbnailImage: { ...StyleSheet.absoluteFill, borderRadius: theme.radius.md },
   ratingBadge: {
     position: "absolute",
     top: 6,

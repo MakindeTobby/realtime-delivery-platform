@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { JwtPayload, UserRole } from '@food-delivery/types';
+import { UserRole } from '@food-delivery/types';
+import type { JwtPayload } from '@food-delivery/types';
 import type { Database } from '../db';
 import { sql } from 'drizzle-orm';
 import { and, eq, gt, isNull } from 'drizzle-orm';

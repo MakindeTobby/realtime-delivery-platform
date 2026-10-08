@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useAuthStore } from "@/store/auth";
+import { AuthApi } from "@/api/auth";
+import { router } from "expo-router";
 
 const ROLE_LABELS: Record<string, string> = {
   CUSTOMER: "Customer",
@@ -20,6 +22,7 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const user = useAuthStore((state) => state.user);
+  const activeRole = useAuthStore((state) => state.activeRole);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   async function handleLogout() {
     Alert.alert("Log out", "Are you sure you want to log out?", [
@@ -31,9 +34,11 @@ export default function ProfileScreen() {
           setIsLoggingOut(true);
 
           try {
-            await clearAuth();
+            await AuthApi.logout();
           } finally {
+            await clearAuth();
             setIsLoggingOut(false);
+            router.replace("/login");
           }
         },
       },
@@ -44,7 +49,9 @@ export default function ProfileScreen() {
   const fullName = user
     ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
     : "Unknown user";
-  const roleLabel = user?.role ? (ROLE_LABELS[user.role] ?? user.role) : "—";
+  const roleLabel = activeRole
+    ? (ROLE_LABELS[activeRole] ?? activeRole)
+    : (user?.roles.map((role) => ROLE_LABELS[role] ?? role).join(", ") ?? "—");
 
   return (
     <ScrollView

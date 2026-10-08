@@ -10,14 +10,17 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { AxiosError } from "axios";
 import { makeStyles, useTheme } from "@/theme";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { AuthApi } from "@/api/auth";
+import { useAuthStore } from "@/store/auth";
 
 export default function LoginScreen() {
   const styles = useStyles();
   const { colors, gradients } = useTheme();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,9 +33,20 @@ export default function LoginScreen() {
     }
     setIsLoading(true);
     try {
-      await AuthApi.login(email, password);
+      const session = await AuthApi.login(email, password);
+      await setAuth(session);
+      router.replace("/");
     } catch (error) {
-      Alert.alert("Login failed", "Invalid email or password.");
+      const message = error instanceof AxiosError
+        ? error.response?.status === 429
+          ? "Too many sign-in attempts. Please wait a little and try again."
+          : error.response?.status === 401
+            ? "Email or password is incorrect."
+            : typeof error.response?.data?.message === "string"
+              ? error.response.data.message
+              : "We couldn't sign you in. Check your connection and try again."
+        : "We couldn't sign you in. Please try again.";
+      Alert.alert("Login failed", message);
     } finally {
       setIsLoading(false);
     }

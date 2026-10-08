@@ -8,6 +8,7 @@ import type { Database } from '../db';
 import {
   driverProfiles,
   restaurants,
+  users,
   verificationStatusEnum,
 } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -72,15 +73,45 @@ export class AdminService {
   }
   async getPendingDrivers() {
     return this.db
-      .select()
+      .select({
+        id: driverProfiles.id,
+        userId: driverProfiles.userId,
+        verificationStatus: driverProfiles.verificationStatus,
+        isOnline: driverProfiles.isOnline,
+        createdAt: driverProfiles.createdAt,
+        updatedAt: driverProfiles.updatedAt,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        phone: users.phone,
+      })
       .from(driverProfiles)
+      .innerJoin(users, eq(driverProfiles.userId, users.id))
       .where(eq(driverProfiles.verificationStatus, 'PENDING'));
   }
 
   async getPendingRestaurants() {
     return this.db
-      .select()
+      .select({
+        id: restaurants.id,
+        ownerId: restaurants.ownerId,
+        name: restaurants.name,
+        description: restaurants.description,
+        imageUrl: restaurants.imageUrl,
+        address: restaurants.address,
+        city: restaurants.city,
+        cuisineType: restaurants.cuisineType,
+        verificationStatus: restaurants.verificationStatus,
+        isOpen: restaurants.isOpen,
+        createdAt: restaurants.createdAt,
+        updatedAt: restaurants.updatedAt,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+        ownerEmail: users.email,
+        ownerPhone: users.phone,
+      })
       .from(restaurants)
+      .innerJoin(users, eq(restaurants.ownerId, users.id))
       .where(eq(restaurants.verificationStatus, 'PENDING'));
   }
 }

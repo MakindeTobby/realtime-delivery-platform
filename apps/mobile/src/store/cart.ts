@@ -14,6 +14,10 @@ type CartState = {
     items: CartItem[];
     restaurantId: string | null;
     deliveryAddress: string;
+    deliveryCity: string;
+    deliveryAddressId: string | null;
+    deliveryLatitude: number | null;
+    deliveryLongitude: number | null;
     deliveryNote: string;
     addItem: (item: Omit<CartItem, "quantity">) => void;
     increment: (id: string) => void;
@@ -21,6 +25,9 @@ type CartState = {
     removeItem: (id: string) => void;
     setNote: (id: string, note: string) => void;
     setDeliveryAddress: (address: string) => void;
+    setDeliveryCity: (city: string) => void;
+    setDeliveryAddressId: (id: string | null) => void;
+    setDeliveryCoordinates: (latitude: number | null, longitude: number | null) => void;
     setDeliveryNote: (note: string) => void;
     clearCart: () => void;
     getQuantity: (id: string) => number;
@@ -32,9 +39,11 @@ type CartState = {
 export const useCartStore = create<CartState>((set, get) => ({
     items: [],
     restaurantId: null,
-    // Mock default so the cart screen has something to show — wire this up
-    // to the user's real saved address once that exists.
-    deliveryAddress: "Gunawarman street No.3, Selong, Kec. Kby. Baru, South Jakarta, Jakarta 12110",
+    deliveryAddress: "",
+    deliveryCity: "",
+    deliveryAddressId: null,
+    deliveryLatitude: null,
+    deliveryLongitude: null,
     deliveryNote: "",
 
     addItem: (item) => {
@@ -92,7 +101,16 @@ export const useCartStore = create<CartState>((set, get) => ({
             items: state.items.map((i) => (i.id === id ? { ...i, note } : i)),
         })),
 
-    setDeliveryAddress: (deliveryAddress) => set({ deliveryAddress }),
+    setDeliveryAddress: (deliveryAddress) =>
+        set({ deliveryAddress, deliveryAddressId: null, deliveryLatitude: null, deliveryLongitude: null }),
+
+    setDeliveryCity: (deliveryCity) =>
+        set({ deliveryCity, deliveryAddressId: null, deliveryLatitude: null, deliveryLongitude: null }),
+
+    setDeliveryAddressId: (deliveryAddressId) => set({ deliveryAddressId }),
+
+    setDeliveryCoordinates: (deliveryLatitude, deliveryLongitude) =>
+        set({ deliveryLatitude, deliveryLongitude }),
 
     setDeliveryNote: (deliveryNote) => set({ deliveryNote }),
 

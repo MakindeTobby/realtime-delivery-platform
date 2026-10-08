@@ -40,7 +40,13 @@
           "enableGoglePay": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow SwiftBite to use your location to set your delivery address."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

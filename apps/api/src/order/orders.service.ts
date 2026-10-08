@@ -8,11 +8,13 @@ import {
 import type { Database } from '../db';
 import {
   driverProfiles,
+  driverLocations,
   menuItems,
   orderItems,
   orders,
   orderStatusHistory,
   restaurants,
+  userAddresses,
   users,
 } from '../db/schema';
 import { and, desc, eq, inArray, SQL } from 'drizzle-orm';
@@ -74,6 +76,38 @@ export class OrdersService {
 
     if (!restaurant.isOpen) {
       throw new BadRequestException('Restaurant is currently closed');
+    }
+
+    let deliveryAddress = dto.deliveryAddress;
+    let deliveryCity = dto.deliveryCity;
+    let deliveryLatitude: string | null = null;
+    let deliveryLongitude: string | null = null;
+
+    if (dto.addressId) {
+      const [savedAddress] = await this.db
+        .select()
+        .from(userAddresses)
+        .where(
+          and(
+            eq(userAddresses.id, dto.addressId),
+            eq(userAddresses.userId, customerId),
+          ),
+        );
+
+      if (!savedAddress) {
+        throw new NotFoundException('Delivery address not found');
+      }
+
+      deliveryAddress = savedAddress.address;
+      deliveryCity = savedAddress.city;
+      deliveryLatitude = savedAddress.latitude;
+      deliveryLongitude = savedAddress.longitude;
+    }
+
+    if (!deliveryAddress || !deliveryCity) {
+      throw new BadRequestException(
+        'Provide a saved address or both delivery address and city',
+      );
     }
 
     //2. Prevent duplicate menu items
@@ -139,8 +173,10 @@ export class OrdersService {
         .values({
           customerId,
           restaurantId: dto.restaurantId,
-          deliveryAddress: dto.deliveryAddress,
-          deliveryCity: dto.deliveryCity,
+          deliveryAddress,
+          deliveryCity,
+          deliveryLatitude,
+          deliveryLongitude,
           totalAmount: total.toFixed(2),
           status: 'PENDING',
         })
@@ -220,9 +256,76 @@ export class OrdersService {
       .from(orderItems)
       .where(eq(orderItems.orderId, id));
 
+    let driver: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      phone: string | null;
+      location: {
+        latitude: string;
+        longitude: string;
+        heading: string | null;
+        speed: string | null;
+        recordedAt: Date;
+      } | null;
+    } | null = null;
+
+    const isOrderCustomer =
+      user.roles.includes(UserRole.CUSTOMER) && order.customerId === user.sub;
+
+    if (
+      order.driverId &&
+      isOrderCustomer &&
+      order.status === 'PICKED_UP'
+    ) {
+      const [assignedDriver] = await this.db
+        .select({
+          id: driverProfiles.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          phone: users.phone,
+        })
+        .from(driverProfiles)
+        .innerJoin(users, eq(users.id, driverProfiles.userId))
+        .where(eq(driverProfiles.id, order.driverId));
+
+      let latestLocation: {
+        latitude: string;
+        longitude: string;
+        heading: string | null;
+        speed: string | null;
+        recordedAt: Date;
+      } | null = null;
+
+      // Historical orders may still retain location rows in the database.
+      if (assignedDriver) {
+        const [location] = await this.db
+          .select({
+            latitude: driverLocations.latitude,
+            longitude: driverLocations.longitude,
+            heading: driverLocations.heading,
+            speed: driverLocations.speed,
+            recordedAt: driverLocations.recordedAt,
+          })
+          .from(driverLocations)
+          .where(eq(driverLocations.driverId, assignedDriver.id))
+          .orderBy(desc(driverLocations.recordedAt))
+          .limit(1);
+
+        if (location && Date.now() - location.recordedAt.getTime() <= 120_000) {
+          latestLocation = location;
+        }
+      }
+
+      if (assignedDriver) {
+        driver = { ...assignedDriver, location: latestLocation };
+      }
+    }
+
     return {
       ...order,
       items,
+      driver,
     };
   }
 
@@ -331,6 +434,7 @@ export class OrdersService {
     role: string,
   ) {
     const ownerTransitions: Record<string, string[]> = {
+      PENDING: ['CONFIRMED', 'CANCELLED'],
       CONFIRMED: ['PREPARING', 'CANCELLED'],
       PREPARING: ['READY', 'CANCELLED'],
     };

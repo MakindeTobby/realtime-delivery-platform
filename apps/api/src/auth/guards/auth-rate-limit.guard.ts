@@ -6,12 +6,15 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request, Response } from 'express';
 import {
   AUTH_RATE_LIMIT_KEY,
   AuthRateLimitPolicy,
 } from '../decorators/auth-rate-limit.decorator';
 import { AuthRateLimitService } from '../auth-rate-limit.service';
+
+type RateLimitResponse = {
+  setHeader: (name: string, value: string) => void;
+};
 
 @Injectable()
 export class AuthRateLimitGuard implements CanActivate {
@@ -27,9 +30,13 @@ export class AuthRateLimitGuard implements CanActivate {
     );
     if (!policy) return true;
 
-    const request = context.switchToHttp().getRequest<Request>();
-    const response = context.switchToHttp().getResponse<Response>();
-    const clientIp = request.ip || request.socket.remoteAddress || 'unknown';
+    const request = context.switchToHttp().getRequest<{
+      ip?: string;
+      socket?: { remoteAddress?: string };
+      body?: { email?: unknown };
+    }>();
+    const response = context.switchToHttp().getResponse<RateLimitResponse>();
+    const clientIp = request.ip || request.socket?.remoteAddress || 'unknown';
 
     if (policy === 'login') {
       await this.checkLimit(
@@ -106,7 +113,7 @@ export class AuthRateLimitGuard implements CanActivate {
   }
 
   private async checkLimit(
-    response: Response,
+    response: RateLimitResponse,
     scope: string,
     identity: string,
     maxAttempts: number,

@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { createHash, randomInt } from 'crypto';
 import { and, desc, eq, isNull } from 'drizzle-orm';
@@ -12,6 +13,8 @@ import { emailVerifications, users } from '../db/schema';
 
 @Injectable()
 export class EmailVerificationService {
+  private readonly logger = new Logger(EmailVerificationService.name);
+
   constructor(
     @Inject('DB')
     private readonly db: Database,
@@ -26,7 +29,7 @@ export class EmailVerificationService {
     return createHash('sha256').update(code).digest('hex');
   }
 
-  async sendVerificationCode(userId: string): Promise<void> {
+  async sendVerificationCode(userId: string): Promise<VerificationDelivery> {
     const [user] = await this.db
       .select({
         id: users.id,
@@ -68,8 +71,46 @@ export class EmailVerificationService {
       expiresAt,
     });
 
-    // Email sending will be wired here next.
-    console.log(`Verification code for ${user.email}: ${code}`);
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.EMAIL_FROM;
+    if (!apiKey || !from) {
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.warn(
+          `Email provider is not configured; development verification code for ${user.email}: ${code}`,
+        );
+        return { status: 'development' };
+      }
+
+      this.logger.error('Email verification is not configured');
+      return { status: 'unavailable' };
+    }
+
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from,
+          to: [user.email],
+          subject: 'Verify your email address',
+          html: `<p>Your verification code is:</p><p style="font-size:24px;font-weight:bold;letter-spacing:4px">${code}</p><p>This code expires in ${this.CODE_EXPIRY_MINUTES} minutes. If you did not create an account, you can ignore this email.</p>`,
+          text: `Your verification code is ${code}. It expires in ${this.CODE_EXPIRY_MINUTES} minutes.`,
+        }),
+      });
+
+      if (!response.ok) {
+        this.logger.error(`Email provider returned ${response.status}`);
+        return { status: 'unavailable' };
+      }
+
+      return { status: 'sent' };
+    } catch (error) {
+      this.logger.error('Could not send email verification code', error);
+      return { status: 'unavailable' };
+    }
   }
 
   async verifyEmail(email: string, code: string): Promise<void> {
@@ -144,7 +185,7 @@ export class EmailVerificationService {
     });
   }
 
-  async resendVerificationCode(email: string): Promise<void> {
+  async resendVerificationCode(email: string): Promise<VerificationDelivery> {
     const [user] = await this.db
       .select({
         id: users.id,
@@ -156,11 +197,11 @@ export class EmailVerificationService {
       .limit(1);
 
     if (!user) {
-      return;
+      return { status: 'unavailable' };
     }
 
     if (user.emailVerified) {
-      return;
+      return { status: 'already-verified' };
     }
 
     const [latestVerification] = await this.db
@@ -177,10 +218,14 @@ export class EmailVerificationService {
       const elapsedMs = Date.now() - latestVerification.createdAt.getTime();
 
       if (elapsedMs < cooldownMs) {
-        return;
+        return { status: 'cooldown' };
       }
     }
 
-    await this.sendVerificationCode(user.id);
+    return this.sendVerificationCode(user.id);
   }
 }
+
+export type VerificationDelivery = {
+  status: 'sent' | 'development' | 'unavailable' | 'already-verified' | 'cooldown';
+};

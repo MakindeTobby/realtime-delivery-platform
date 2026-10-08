@@ -11,10 +11,12 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useAuth } from "@/context/auth-context";
+import { AxiosError } from "axios";
 import { makeStyles, useTheme } from "@/theme";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
+import { AuthApi } from "@/api/auth";
+import { useAuthStore } from "@/store/auth";
 
 type RegisterForm = {
   firstName: string;
@@ -26,7 +28,7 @@ type RegisterForm = {
 type FieldName = keyof RegisterForm;
 
 export default function RegisterScreen() {
-  const { register } = useAuth();
+  const setAuth = useAuthStore((state) => state.setAuth);
   const styles = useStyles();
   const { colors, gradients } = useTheme();
 
@@ -50,11 +52,21 @@ export default function RegisterScreen() {
     }
     setIsLoading(true);
     try {
-      await register(form);
+      const session = await AuthApi.register(form);
+      await setAuth(session);
+      router.replace(session.user.emailVerified ? "/" : "/verify-email");
     } catch (error) {
+      const responseMessage = error instanceof AxiosError
+        ? error.response?.data?.message
+        : undefined;
+      const message = error instanceof AxiosError && error.response?.status === 429
+        ? "Too many account creation attempts. Please wait and try again."
+        : typeof responseMessage === "string"
+          ? responseMessage
+          : "Please check your connection and account details, then try again.";
       Alert.alert(
         "Registration failed",
-        "Please check your details and try again.",
+        message,
       );
     } finally {
       setIsLoading(false);

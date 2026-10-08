@@ -6,7 +6,8 @@ export type MenuItem = {
     description?: string;
     price: number;
     originalPrice?: number;
-    imageColor: string; // placeholder swatch until real photos are wired up
+    imageColor: string; // fallback swatch when an item has no uploaded image
+    imageUrl?: string | null;
     hasExtraDiscount?: boolean;
     soldOut?: boolean;
 };

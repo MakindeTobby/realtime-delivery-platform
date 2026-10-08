@@ -11,18 +11,19 @@ import { OrderStatusTimeline } from "@/components/order/OrderStatusTimeline";
 import { DriverCard } from "@/components/order/DriverCard";
 import { DriverAssignedModal } from "@/components/order/DriverAssignedModal";
 import { OrderCancelledState } from "@/components/order/OrderCancelledState";
+import { PickupOrderTracking } from "@/components/order/PickupOrderTracking";
 
 export default function OrderTrackingScreen() {
   const styles = useStyles();
   const { colors } = useTheme();
   const params = useLocalSearchParams<{
-    orderId: string;
+    id: string;
     restaurantName?: string;
     totalPayment?: string;
   }>();
-  const orderId = params.orderId ?? "unknown";
+  const orderId = params.id ?? "";
 
-  const { status, driver, etaMinutes, isConnecting } =
+  const { order, status, driver, etaMinutes, isConnecting, connectionError, refetch } =
     useOrderTracking(orderId);
 
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
@@ -62,11 +63,31 @@ export default function OrderTrackingScreen() {
     );
   }
 
+  if (connectionError) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.errorState}>
+          <Text style={styles.headerTitle}>{connectionError}</Text>
+          <Pressable onPress={() => void refetch()}><Text style={styles.retry}>Try again</Text></Pressable>
+        </View>
+      </View>
+    );
+  }
+
   if (status === OrderStatus.CANCELLED) {
     return (
       <View style={styles.screen}>
         <OrderCancelledState />
       </View>
+    );
+  }
+
+  if (status === OrderStatus.PICKED_UP && order) {
+    return (
+      <PickupOrderTracking
+        order={order}
+        restaurantName={params.restaurantName ?? order.restaurant?.name}
+      />
     );
   }
 
@@ -113,7 +134,7 @@ export default function OrderTrackingScreen() {
           <View style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Order #{orderId.slice(-6)}</Text>
             <Text style={styles.summaryValue}>
-              Rp{Number(params.totalPayment).toLocaleString("id-ID")}
+              ₦{Number(params.totalPayment).toLocaleString("en-NG")}
             </Text>
           </View>
         )}
@@ -159,6 +180,8 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.text.secondary,
   },
   content: { paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xxxl },
+  errorState: { flex: 1, alignItems: "center", justifyContent: "center", padding: theme.spacing.xl, gap: theme.spacing.md },
+  retry: { ...theme.typography.bodyMedium, color: theme.colors.brand.primary },
   sectionLabel: {
     ...theme.typography.captionMedium,
     color: theme.colors.text.secondary,

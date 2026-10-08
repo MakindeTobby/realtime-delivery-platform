@@ -2,10 +2,13 @@ import React, { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { router } from "expo-router";
 import { makeStyles } from "@/theme";
-import { useOrdersStore, ACTIVE_STATUSES, PAST_STATUSES } from "@/store/orders";
+import { ACTIVE_STATUSES, PAST_STATUSES } from "@/store/orders";
 import { FilterChips, type FilterChip } from "@/components/near-me/FilterChips";
 import { OrderListCard } from "@/components/order/OrderListCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useMyOrdersQuery } from "@/hooks/use-orders";
+import type { OrderRecord } from "@/store/orders";
+import { BrandLoader } from "@/components/ui/BrandLoader";
 
 const SEGMENTS: FilterChip[] = [
   { id: "active", label: "Active" },
@@ -14,7 +17,17 @@ const SEGMENTS: FilterChip[] = [
 
 export default function OrderTabScreen() {
   const styles = useStyles();
-  const orders = useOrdersStore((s) => s.orders);
+  const ordersQuery = useMyOrdersQuery();
+  const orders: OrderRecord[] = (ordersQuery.data ?? []).map((order) => ({
+    id: order.id,
+    restaurantId: order.restaurantId,
+    restaurantName: order.restaurant?.name ?? "Restaurant",
+    itemsSummary: order.items.map((item) => `${item.quantity}× ${item.itemName}`).join(", "),
+    itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+    totalPayment: Number(order.totalAmount),
+    status: order.status,
+    createdAt: new Date(order.createdAt).getTime(),
+  }));
   const [segment, setSegment] = useState("active");
 
   const filtered = useMemo(() => {
@@ -38,7 +51,17 @@ export default function OrderTabScreen() {
         />
       </View>
 
-      {orders.length === 0 ? (
+      {ordersQuery.isLoading ? (
+        <View style={styles.loadingState}><BrandLoader label="Checking your orders…" /></View>
+      ) : ordersQuery.isError ? (
+        <EmptyState
+          icon="cloud-offline-outline"
+          title="Couldn’t load orders"
+          subtitle="Check your connection and try again."
+          actionLabel="Try again"
+          onPressAction={() => void ordersQuery.refetch()}
+        />
+      ) : orders.length === 0 ? (
         <EmptyState
           icon="receipt-outline"
           title="No orders yet"
@@ -67,6 +90,8 @@ export default function OrderTabScreen() {
           renderItem={({ item }) => <OrderListCard order={item} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshing={ordersQuery.isRefetching}
+          onRefresh={() => void ordersQuery.refetch()}
         />
       )}
     </View>
@@ -75,6 +100,7 @@ export default function OrderTabScreen() {
 
 const useStyles = makeStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.colors.background.surface },
+  loadingState: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.xxl,

@@ -43,7 +43,7 @@ export function UpsellDishesRow({ restaurantId, dishes, excludeIds }: Props) {
               {dish.name}
             </Text>
             <Text style={styles.price}>
-              Rp{dish.price.toLocaleString("id-ID")}
+              ₦{dish.price.toLocaleString("en-NG")}
             </Text>
             <QuantityStepper
               itemId={dish.id}

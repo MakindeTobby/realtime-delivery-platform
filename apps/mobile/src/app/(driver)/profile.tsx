@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-import { useAuth } from "@/context/auth-context";
+import { AuthApi } from "@/api/auth";
+import { useAuthStore } from "@/store/auth";
 
 type MenuLink = {
   id: string;
@@ -31,7 +32,8 @@ const MENU_LINKS: MenuLink[] = [
 ];
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   function handleLogout() {
@@ -43,9 +45,11 @@ export default function ProfileScreen() {
         onPress: async () => {
           setIsLoggingOut(true);
           try {
-            await logout();
+            await AuthApi.logout();
           } finally {
+            await clearAuth();
             setIsLoggingOut(false);
+            router.replace("/login");
           }
         },
       },

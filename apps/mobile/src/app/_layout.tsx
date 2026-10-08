@@ -16,6 +16,10 @@ import { UserRole } from "@food-delivery/types";
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth";
+import { StatusBar } from "react-native";
+import { View } from "react-native";
+import { BrandLoader } from "@/components/ui/BrandLoader";
+import { theme } from "@/theme";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,11 +43,24 @@ function RootNavigator() {
     }
   }, [fontLoaded, fontLoadError, isHydrating]);
   useEffect(() => {
-    useAuthStore.getState().finishHydration();
+    const hydrateSession = () => {
+      void useAuthStore.getState().finishHydration();
+    };
+
+    if (useAuthStore.persist.hasHydrated()) {
+      hydrateSession();
+      return;
+    }
+
+    return useAuthStore.persist.onFinishHydration(hydrateSession);
   }, []);
 
   if (isHydrating || (!fontLoaded && !fontLoadError)) {
-    return null;
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.background.surface }}>
+        <BrandLoader label="Loading SwiftBite…" />
+      </View>
+    );
   }
 
   return (
@@ -56,17 +73,40 @@ function RootNavigator() {
         <Stack.Screen name="register" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!!user && user.role === UserRole.CUSTOMER}>
+      <Stack.Protected guard={!!user && !user.emailVerified}>
+        <Stack.Screen name="verify-email" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!!user && user.emailVerified}>
+        <Stack.Screen name="choose-role" />
+        <Stack.Screen name="unsupported-role" />
+      </Stack.Protected>
+
+      <Stack.Protected
+        guard={
+          !!user &&
+          user.emailVerified &&
+          user.roles?.includes(UserRole.CUSTOMER)
+        }
+      >
         <Stack.Screen name="(customer)" />
       </Stack.Protected>
 
       <Stack.Protected
-        guard={!!user && user.role === UserRole.RESTAURANT_OWNER}
+        guard={
+          !!user &&
+          user.emailVerified &&
+          user.roles?.includes(UserRole.RESTAURANT_OWNER)
+        }
       >
         <Stack.Screen name="(owner)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!!user && user.role === UserRole.DRIVER}>
+      <Stack.Protected
+        guard={
+          !!user && user.emailVerified && user.roles?.includes(UserRole.DRIVER)
+        }
+      >
         <Stack.Screen name="(driver)" />
       </Stack.Protected>
     </Stack>
@@ -75,6 +115,7 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <StripeProvider
         publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
       >

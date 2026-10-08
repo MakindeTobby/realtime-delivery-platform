@@ -1,38 +1,34 @@
 import React from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { makeStyles, useTheme } from "../../theme";
 
 type Props = {
   address: string;
+  firstName?: string;
+  cartCount: number;
   onPressAddress?: () => void;
-  onPressFavorites?: () => void;
+  onPressCart?: () => void;
   onPressNotifications?: () => void;
-  searchValue: string;
-  onChangeSearch: (value: string) => void;
+  onPressSearch: () => void;
 };
 
 export function HomeHeader({
   address,
+  firstName,
+  cartCount,
   onPressAddress,
-  onPressFavorites,
+  onPressCart,
   onPressNotifications,
-  searchValue,
-  onChangeSearch,
+  onPressSearch,
 }: Props) {
   const styles = useStyles();
-  const { gradients, colors } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
-    <LinearGradient
-      colors={gradients.header}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.container, { paddingTop: insets.top + 12 }]}
-    >
+    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.topRow}>
         <Pressable
           onPress={onPressAddress}
@@ -41,112 +37,125 @@ export function HomeHeader({
           accessibilityRole="button"
           accessibilityLabel="Change delivery address"
         >
-          <Text style={styles.addressLabel}>Your current address</Text>
           <View style={styles.addressRow}>
+            <Ionicons name="location" size={14} color={colors.brand.primary} />
             <Text style={styles.addressValue} numberOfLines={1}>
               {address}
             </Text>
             <Ionicons
               name="chevron-down"
               size={16}
-              color={colors.text.inverse}
+              color={colors.brand.primary}
             />
           </View>
+          <Text style={styles.greeting}>Good {getGreeting()}, {firstName || "there"}</Text>
         </Pressable>
 
         <View style={styles.iconRow}>
           <Pressable
-            onPress={onPressFavorites}
+            onPress={onPressNotifications}
             style={styles.iconButton}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Favorites"
           >
             <Ionicons
-              name="heart-outline"
+              name="notifications-outline"
               size={20}
-              color={colors.text.inverse}
+              color={colors.text.primary}
             />
           </Pressable>
           <Pressable
-            onPress={onPressNotifications}
+            onPress={onPressCart}
             style={styles.iconButton}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Notifications"
           >
             <Ionicons
-              name="notifications-outline"
+              name="bag-handle-outline"
               size={20}
-              color={colors.text.inverse}
+              color={colors.text.primary}
             />
+            {cartCount > 0 && <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{cartCount > 9 ? "9+" : cartCount}</Text></View>}
           </Pressable>
         </View>
       </View>
 
-      {/* <View style={styles.searchBar}>
+      <Pressable
+        style={styles.searchBar}
+        onPress={onPressSearch}
+        accessibilityRole="button"
+        accessibilityLabel="Search for food or restaurants. Opens Discover."
+      >
         <Ionicons name="search" size={18} color={colors.text.secondary} />
-        <TextInput
-          style={styles.searchInput}
-          value={searchValue}
-          onChangeText={onChangeSearch}
-          placeholder="What would you like to eat?"
-          placeholderTextColor={colors.text.secondary}
-          returnKeyType="search"
-        />
-      </View> */}
-    </LinearGradient>
+        <Text style={styles.searchPlaceholder}>Search for food or restaurants</Text>
+        <Ionicons name="options-outline" size={19} color={colors.text.secondary} />
+      </Pressable>
+    </View>
   );
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  return "evening";
 }
 
 const useStyles = makeStyles((theme) => ({
   container: {
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-    borderBottomLeftRadius: theme.radius.xl,
-    borderBottomRightRadius: theme.radius.xl,
+    paddingBottom: theme.spacing.md,
+    backgroundColor: theme.colors.background.surface,
   },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
   },
   addressBlock: { flexShrink: 1, paddingRight: theme.spacing.sm },
-  addressLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text.inverse,
-    opacity: 0.85,
-  },
-  addressRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  addressRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   addressValue: {
-    ...theme.typography.h3,
-    color: theme.colors.text.inverse,
-    marginRight: 4,
+    ...theme.typography.tiny,
+    color: theme.colors.text.primary,
+    flexShrink: 1,
+  },
+  greeting: {
+    ...theme.typography.bodyMedium,
+    fontFamily: theme.fontFamily.bold,
+    color: theme.colors.text.primary,
+    marginTop: 4,
   },
   iconRow: { flexDirection: "row", gap: theme.spacing.xs },
   iconButton: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: theme.radius.full,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
+    backgroundColor: theme.colors.background.surface,
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
   },
+  cartBadge: { position: "absolute", right: -3, top: -4, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 3, backgroundColor: theme.colors.brand.primary, alignItems: "center", justifyContent: "center" },
+  cartBadgeText: { color: theme.colors.text.inverse, fontSize: 9, fontWeight: "700" },
   searchBar: {
-    marginTop: theme.spacing.lg,
-    backgroundColor: theme.colors.background.surface,
-    borderRadius: theme.radius.full,
+    marginTop: theme.spacing.sm,
+    borderRadius: theme.radius.md,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
-    height: 48,
-    gap: theme.spacing.xs,
-    ...theme.shadows.card,
+    height: 44,
+    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border.default,
+    backgroundColor: theme.colors.background.subtle,
   },
-  searchInput: {
+  searchPlaceholder: {
     flex: 1,
     ...theme.typography.body,
-    color: theme.colors.text.primary,
-    padding: 0,
+    color: theme.colors.text.secondary,
   },
 }));

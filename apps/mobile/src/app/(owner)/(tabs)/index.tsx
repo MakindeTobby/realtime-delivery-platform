@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,66 +10,44 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/auth";
-
-type OrderStatus = "PENDING" | "PREPARING" | "READY";
-
-type Order = {
-  id: string;
-  customerName: string;
-  items: string;
-  total: string;
-  status: OrderStatus;
-  time: string;
-};
-
-// Mock data — swap this out for your real orders hook when it's ready
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "1",
-    customerName: "Ada L.",
-    items: "2x Jollof Rice, 1x Suya",
-    total: "$18.50",
-    status: "PENDING",
-    time: "2 min ago",
-  },
-  {
-    id: "2",
-    customerName: "Tunde O.",
-    items: "1x Shawarma",
-    total: "$9.00",
-    status: "PREPARING",
-    time: "8 min ago",
-  },
-  {
-    id: "3",
-    customerName: "Chioma A.",
-    items: "3x Puff Puff, 1x Zobo",
-    total: "$12.75",
-    status: "READY",
-    time: "14 min ago",
-  },
-];
+import { useRestaurantOrdersQuery, useUpdateOrderStatusMutation } from "@/hooks/use-orders";
+import type { ApiOrder } from "@/api/orders";
+import type { OrderStatusValue } from "@/types/order";
+import { BrandLoader } from "@/components/ui/BrandLoader";
 
 const STATUS_STYLES: Record<
-  OrderStatus,
+  OrderStatusValue,
   { bg: string; text: string; label: string }
 > = {
   PENDING: { bg: "#FDEBD3", text: "#C77A2E", label: "New" },
+  CONFIRMED: { bg: "#E5EBFB", text: "#4A63C7", label: "Accepted" },
   PREPARING: { bg: "#E5EBFB", text: "#4A63C7", label: "Preparing" },
   READY: { bg: "#E3F6E9", text: "#2E9A54", label: "Ready" },
+  PICKED_UP: { bg: "#E3F6E9", text: "#2E9A54", label: "Picked up" },
+  DELIVERED: { bg: "#E3F6E9", text: "#2E9A54", label: "Delivered" },
+  CANCELLED: { bg: "#F2F2F2", text: "#777777", label: "Cancelled" },
 };
 
 export default function OwnerHomeScreen() {
   const user = useAuthStore((state) => state.user);
   const [refreshing, setRefreshing] = useState(false);
-  const [orders] = useState<Order[]>(MOCK_ORDERS);
+  const ordersQuery = useRestaurantOrdersQuery();
+  const updateStatus = useUpdateOrderStatusMutation();
+  const orders = ordersQuery.data ?? [];
 
   const pendingCount = orders.filter((o) => o.status === "PENDING").length;
 
-  function onRefresh() {
+  async function onRefresh() {
     setRefreshing(true);
-    // Replace with a real refetch call
-    setTimeout(() => setRefreshing(false), 800);
+    await ordersQuery.refetch();
+    setRefreshing(false);
+  }
+
+  function nextAction(order: ApiOrder): { status: OrderStatusValue; label: string } | null {
+    if (order.status === "PENDING") return { status: "CONFIRMED", label: "Accept order" };
+    if (order.status === "CONFIRMED") return { status: "PREPARING", label: "Start preparing" };
+    if (order.status === "PREPARING") return { status: "READY", label: "Ready for pickup" };
+    return null;
   }
 
   return (
@@ -91,7 +70,7 @@ export default function OwnerHomeScreen() {
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{orders.length}</Text>
+          <Text style={styles.statValue}>{orders.filter((o) => !["DELIVERED", "CANCELLED"].includes(o.status)).length}</Text>
           <Text style={styles.statLabel}>Active Orders</Text>
         </View>
         <View style={styles.statCard}>
@@ -99,25 +78,29 @@ export default function OwnerHomeScreen() {
           <Text style={styles.statLabel}>Awaiting You</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>$40.25</Text>
-          <Text style={styles.statLabel}>Today's Sales</Text>
+          <Text style={styles.statValue}>₦{orders.filter((o) => o.status === "DELIVERED").reduce((sum, order) => sum + Number(order.totalAmount), 0).toLocaleString("en-NG")}</Text>
+          <Text style={styles.statLabel}>Delivered sales</Text>
         </View>
       </View>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Incoming Orders</Text>
-        <Pressable>
-          <Text style={styles.seeAll}>See all</Text>
-        </Pressable>
+        <Text style={styles.seeAll}>Refreshes every 10 sec</Text>
       </View>
 
       <View style={styles.ordersList}>
-        {orders.map((order) => {
+        {ordersQuery.isLoading ? (
+          <BrandLoader label="Loading restaurant orders…" />
+        ) : ordersQuery.isError ? (
+          <Pressable onPress={() => void ordersQuery.refetch()}><Text style={styles.emptyText}>Couldn’t load orders. Tap to retry.</Text></Pressable>
+        ) : orders.map((order) => {
           const statusStyle = STATUS_STYLES[order.status];
+          const action = nextAction(order);
+          const itemSummary = order.items.map((item) => `${item.quantity}× ${item.itemName}`).join(", ");
           return (
-            <Pressable key={order.id} style={styles.orderCard}>
+            <View key={order.id} style={styles.orderCard}>
               <View style={styles.orderTop}>
-                <Text style={styles.customerName}>{order.customerName}</Text>
+                <Text style={styles.customerName}>Order #{order.id.slice(-6)}</Text>
                 <View
                   style={[
                     styles.statusBadge,
@@ -131,16 +114,28 @@ export default function OwnerHomeScreen() {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.orderItems}>{order.items}</Text>
+              <Text style={styles.orderItems}>{itemSummary || "No item details"}</Text>
               <View style={styles.orderBottom}>
-                <Text style={styles.orderTotal}>{order.total}</Text>
-                <Text style={styles.orderTime}>{order.time}</Text>
+                <Text style={styles.orderTotal}>₦{Number(order.totalAmount).toLocaleString("en-NG")}</Text>
+                <Text style={styles.orderTime}>{new Date(order.createdAt).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</Text>
               </View>
-            </Pressable>
+              {action && (
+                <Pressable
+                  style={styles.orderAction}
+                  disabled={updateStatus.isPending}
+                  onPress={() => updateStatus.mutate(
+                    { id: order.id, status: action.status },
+                    { onError: () => Alert.alert("Couldn’t update order", "Refresh the order and try again.") },
+                  )}
+                >
+                  <Text style={styles.orderActionText}>{action.label}</Text>
+                </Pressable>
+              )}
+            </View>
           );
         })}
 
-        {orders.length === 0 && (
+        {!ordersQuery.isLoading && !ordersQuery.isError && orders.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🍽️</Text>
             <Text style={styles.emptyText}>No orders yet today</Text>
@@ -286,6 +281,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#B0A9C9",
   },
+  orderAction: {
+    backgroundColor: "#8E4FC7",
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 6,
+  },
+  orderActionText: { color: "#FFFFFF", textAlign: "center", fontWeight: "700" },
   emptyState: {
     alignItems: "center",
     paddingVertical: 40,

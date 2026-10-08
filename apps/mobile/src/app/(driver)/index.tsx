@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuthStore } from "@/store/auth";
 import {
   ScrollView,
   StyleSheet,
@@ -7,7 +8,6 @@ import {
   Pressable,
   Switch,
 } from "react-native";
-import { useAuth } from "@/context/auth-context";
 
 type DeliveryRequest = {
   id: string;
@@ -39,7 +39,7 @@ const AVAILABLE_REQUESTS: DeliveryRequest[] = [
 ];
 
 export default function DriverHomeScreen() {
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const [isOnline, setIsOnline] = useState(false);
 
   return (

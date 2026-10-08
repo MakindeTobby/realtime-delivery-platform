@@ -7,6 +7,8 @@ The API exposes:
 
 The forgot-password endpoint sends a link through Resend. Configure `RESEND_API_KEY`, `EMAIL_FROM`, and `PASSWORD_RESET_URL`; the reset token is appended as the `token` query parameter to that URL. The URL should open a client page that submits the token and new password to the reset endpoint. Requests return `503` when the email provider configuration is absent; provider delivery errors are logged while the response remains generic.
 
+Email verification also uses Resend with `RESEND_API_KEY` and `EMAIL_FROM`. Verification codes expire after 10 minutes. In non-production environments without email configuration, the API logs the code for local development; in production, it does not expose or log codes when delivery is unavailable. Verify the sender domain with Resend and configure these variables in the API deployment before inviting restaurant owners.
+
 Reset tokens are stored as SHA-256 hashes. A successful reset revokes all active sessions, requiring sign-in again on every device.
 
 Apply `drizzle/20260929042000_password_resets/migration.sql` before deploying this API version. Forgot/reset endpoints have separate rate limits documented in `AUTH_RATE_LIMITS.md`.

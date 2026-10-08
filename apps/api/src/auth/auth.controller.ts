@@ -20,8 +20,11 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { EmailVerificationService } from './email-verification.service';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CheckPartnerExistenceDto } from './dto/check-partner.dto';
 
 @Controller('auth') // /api/auth
+@ApiTags('Authentication')
 export class AuthController {
   constructor(
     private authService: AuthService,
@@ -29,6 +32,8 @@ export class AuthController {
   ) {}
 
   @Post('register') //  /api/auth/register
+  @ApiOperation({ summary: 'Register a customer account' })
+  @ApiBody({ type: RegisterDto })
   @UseGuards(AuthRateLimitGuard)
   @AuthRateLimit('register')
   register(@Body() dto: RegisterDto) {
@@ -36,6 +41,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @ApiOperation({ summary: 'Sign in with email and password' })
+  @ApiBody({ type: LoginDto })
   @UseGuards(AuthRateLimitGuard)
   @AuthRateLimit('login')
   login(@Body() dto: LoginDto) {
@@ -43,16 +50,22 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @ApiOperation({ summary: 'Rotate an access and refresh token pair' })
+  @ApiBody({ type: RefreshTokenDto })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto);
   }
 
   @Post('logout')
+  @ApiOperation({ summary: 'Revoke the current refresh-token session' })
+  @ApiBody({ type: RefreshTokenDto })
   logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto);
   }
 
   @Post('forgot-password')
+  @ApiOperation({ summary: 'Request a password reset' })
+  @ApiBody({ type: ForgotPasswordDto })
   @UseGuards(AuthRateLimitGuard)
   @AuthRateLimit('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -60,6 +73,8 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @ApiOperation({ summary: 'Set a new password using a reset token' })
+  @ApiBody({ type: ResetPasswordDto })
   @UseGuards(AuthRateLimitGuard)
   @AuthRateLimit('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
@@ -67,17 +82,29 @@ export class AuthController {
   }
 
   @Get('me')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get the authenticated user profile and roles' })
   @UseGuards(JwtAuthGuard)
   me(@Request() req: ExpressRequest & { user: JwtPayload }) {
     return this.authService.getCurrentUser(req.user.sub);
   }
 
   @Post('verify-email')
+  @ApiOperation({ summary: 'Verify an email address with its six-digit code' })
+  @ApiBody({ type: VerifyEmailDto })
   verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.emailVerificationService.verifyEmail(dto.email, dto.code);
   }
   @Post('resend-verification')
+  @ApiOperation({ summary: 'Request another email verification code' })
+  @ApiBody({ type: ResendVerificationDto })
   resendVerification(@Body() dto: ResendVerificationDto) {
     return this.emailVerificationService.resendVerificationCode(dto.email);
+  }
+  @Post('partner/check-existence')
+  @ApiOperation({ summary: 'Check if a partner account exists' })
+  @ApiBody({ type: CheckPartnerExistenceDto })
+  checkPartnerExistence(@Body() dto: CheckPartnerExistenceDto) {
+    return this.authService.checkPartnerExistence(dto.email);
   }
 }

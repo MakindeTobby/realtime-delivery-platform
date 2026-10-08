@@ -25,11 +25,11 @@ export function CartItemRow({ item }: Props) {
           </Text>
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              Rp{item.price.toLocaleString("id-ID")}
+              ₦{item.price.toLocaleString("en-NG")}
             </Text>
             {item.originalPrice && (
               <Text style={styles.originalPrice}>
-                Rp{item.originalPrice.toLocaleString("id-ID")}
+                ₦{item.originalPrice.toLocaleString("en-NG")}
               </Text>
             )}
           </View>

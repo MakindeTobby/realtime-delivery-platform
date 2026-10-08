@@ -6,14 +6,19 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { PaymentsService } from "./payments.service";
 import { CreatePaymentIntentDto } from "./dto/create-payment-intent.dto";
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 type AuthRequest = ExpressRequest & { user: JwtPayload }
 
 @Controller('payments')
+@ApiTags('Payments')
 export class PaymentsController {
     constructor(private paymentsService: PaymentsService) { }
 
     @Post('intent')
+    @ApiBearerAuth('access-token')
+    @ApiBody({ type: CreatePaymentIntentDto })
+    @ApiOperation({ summary: 'Create or retrieve a Stripe payment intent for an order' })
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.CUSTOMER)
     createIntent(
@@ -24,6 +29,7 @@ export class PaymentsController {
     }
 
     @Post('webhook')
+    @ApiOperation({ summary: 'Receive verified Stripe payment events' })
     @HttpCode(200)
     handleWebhook(
         @Request() req: RawBodyRequest<ExpressRequest>,

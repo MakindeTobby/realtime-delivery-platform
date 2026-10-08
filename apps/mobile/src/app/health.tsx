@@ -1,7 +1,8 @@
 import { api } from "@/lib/axios";
 import { useQuery } from "@tanstack/react-query";
 import { HealthCheckResponse } from "@food-delivery/types";
-import { ActivityIndicator, Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet } from "react-native";
+import { BrandLoader } from "@/components/ui/BrandLoader";
 
 export default function HomeScreen() {
   const { data, isLoading, error } = useQuery<HealthCheckResponse>({
@@ -16,7 +17,7 @@ export default function HomeScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <BrandLoader label="Checking API…" />
       </View>
     );
   }

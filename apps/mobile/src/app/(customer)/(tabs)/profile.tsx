@@ -9,15 +9,16 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { makeStyles, useTheme } from "@/theme";
 import { useAuthStore } from "@/store/auth";
+import { AuthApi } from "@/api/auth";
 
 type MenuLink = {
   id: string;
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  route: string;
+  route: Href;
 };
 
 const MENU_LINKS: MenuLink[] = [
@@ -31,19 +32,19 @@ const MENU_LINKS: MenuLink[] = [
     id: "2",
     label: "Payment methods",
     icon: "card-outline",
-    route: "/profile/payments",
+    route: "/profile/payments" as Href,
   },
   {
     id: "3",
     label: "Favorites",
     icon: "heart-outline",
-    route: "/profile/favorites",
+    route: "/profile/favorites" as Href,
   },
   {
     id: "4",
     label: "Help & support",
     icon: "help-circle-outline",
-    route: "/profile/support",
+    route: "/profile/support" as Href,
   },
 ];
 
@@ -64,9 +65,11 @@ export default function ProfileScreen() {
           setIsLoggingOut(true);
 
           try {
-            await clearAuth();
+            await AuthApi.logout();
           } finally {
+            await clearAuth();
             setIsLoggingOut(false);
+            router.replace("/login");
           }
         },
       },
@@ -190,7 +193,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.colors.background.surface,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border.default,
+    borderColor: theme.colors.border.subtle,
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
@@ -213,7 +216,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.colors.background.surface,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border.default,
+    borderColor: theme.colors.border.subtle,
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.xl,
   },
